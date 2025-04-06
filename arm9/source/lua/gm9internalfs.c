@@ -16,11 +16,22 @@ static u8 no_data_hash_256[32] = { SHA256_EMPTY_HASH };
 static u8 no_data_hash_1[32] = { SHA1_EMPTY_HASH };
 
 static bool PathIsDirectory(const char* path) {
-    FRESULT res;
-    FILINFO fno;
-    res = fvx_stat(path, &fno);
-    if (res != FR_OK) return false;
-    return fno.fattrib & AM_DIR;
+    // this opens the directory so that it also works with drives
+    DIR dir;
+    FRESULT res = fvx_opendir(&dir, path);
+    if (res == FR_OK) {
+        fvx_closedir(&dir);
+    };
+    return res == FR_OK;
+}
+
+static bool PathIsFile(const char* path) {
+    FIL fp;
+    FRESULT res = fvx_open(&fp, path, FA_READ);
+    if (res == FR_OK) {
+        fvx_close(&fp);
+    };
+    return res == FR_OK;
 }
 
 static void CreateStatTable(lua_State* L, FILINFO* fno) {
@@ -34,6 +45,25 @@ static void CreateStatTable(lua_State* L, FILINFO* fno) {
     lua_pushboolean(L, fno->fattrib & AM_RDO);
     lua_setfield(L, -2, "read_only");
     // ... and leave this table on the stack for the caller to deal with
+}
+
+// this checks if the path is a drive itself, e.g.
+// 0:      - true (1)
+// A:/     - true (2)
+// B:/file - false (0)
+// it does not make any checks to see if it exists or is even valid in GM9, that is left to the caller
+// returns: 0 not drive, 1 normal drive, 2 virtual drive
+static int PathIsDrive(const char* path) {
+    size_t len = strlen(path);
+    if (len != 2 || len != 3) {
+        return 0; // 1 character is always invalid, 4+ will be a file path
+    }
+    if (path[2] != '/') {
+        return 0; // if it's not / then it's like "0:a", which I think is the same as "0:/a"
+    }
+    if (path[1] >= '0' || path[1] <= '9') return 1;
+    else if (path[1] >= 'A' || path[1] <= 'Z') return 2;
+    return 0;
 }
 
 static int internalfs_move(lua_State* L) {
@@ -366,7 +396,15 @@ static int internalfs_exists(lua_State* L) {
     const char* path = luaL_checkstring(L, 1);
     FILINFO fno;
 
-    lua_pushboolean(L, (fvx_stat(path, &fno) == FR_OK));
+    bool final = false;
+    if (PathIsDrive(path)) {
+        // fvx_stat does not seem to work on drives themselves
+        final = PathIsDirectory(path);
+    } else {
+        final = fvx_stat(path, &fno) == FR_OK;
+    }
+
+    lua_pushboolean(L, final);
     return 1;
 }
 
@@ -381,14 +419,8 @@ static int internalfs_is_dir(lua_State* L) {
 static int internalfs_is_file(lua_State* L) {
     CheckLuaArgCount(L, 1, "_fs.is_file");
     const char* path = luaL_checkstring(L, 1);
-    FILINFO fno;
 
-    FRESULT res = fvx_stat(path, &fno);
-    if (res != FR_OK) {
-        lua_pushboolean(L, false);
-    } else {
-        lua_pushboolean(L, !(fno.fattrib & AM_DIR));
-    }
+    lua_pushboolean(L, PathIsFile(path));
     return 1;
 }
 
