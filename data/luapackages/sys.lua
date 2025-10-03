@@ -5,6 +5,7 @@ sys.reboot = _sys.reboot
 sys.power_off = _sys.power_off
 sys.check_embedded_backup = _sys.check_embedded_backup
 sys.check_raw_rtc = _sys.check_raw_rtc
+sys.boot_args = _sys.boot_args
 
 sys.secureinfo_letter = nil
 sys.region = nil

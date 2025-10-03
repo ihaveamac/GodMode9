@@ -11,9 +11,6 @@ SystemSHMEM *shmemBasePtr;
 
 void main(int argc, char** argv, int entrypoint)
 {
-    (void) argc;
-    (void) argv;
-
     PXI_Reset();
 
     // Don't even try to send any messages until the
@@ -26,10 +23,10 @@ void main(int argc, char** argv, int entrypoint)
 
     #ifdef SCRIPT_RUNNER
     // Run the script runner
-    if (ScriptRunner(entrypoint) == GODMODE_EXIT_REBOOT)
+    if (ScriptRunner(argc, argv, entrypoint) == GODMODE_EXIT_REBOOT)
     #else
     // Run the main program
-    if (GodMode(entrypoint) == GODMODE_EXIT_REBOOT)
+    if (GodMode(argc, argv, entrypoint) == GODMODE_EXIT_REBOOT)
     #endif
         Reboot();
 

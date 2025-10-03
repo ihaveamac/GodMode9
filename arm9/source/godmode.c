@@ -45,6 +45,9 @@
 #define BOOTMENU_KEY    BUTTON_START
 #endif
 
+int argc_store = 0;
+char** argv_store = NULL;
+
 
 typedef struct {
     char path[256];
@@ -2380,7 +2383,14 @@ u32 HomeMoreMenu(char* current_path) {
     return HomeMoreMenu(current_path);
 }
 
-u32 GodMode(int entrypoint) {
+void GetBootArgs(int* argc_out, char*** argv_out) {
+    *argc_out = argc_store;
+    *argv_out = argv_store;
+};
+
+u32 GodMode(int argc, char** argv, int entrypoint) {
+    argc_store = argc;
+    argv_store = argv;
     const u32 quick_stp = (MAIN_SCREEN == TOP_SCREEN) ? 20 : 19;
     u32 exit_mode = GODMODE_EXIT_POWEROFF;
 
@@ -3105,7 +3115,9 @@ u32 GodMode(int entrypoint) {
 }
 
 #else
-u32 ScriptRunner(int entrypoint) {
+u32 ScriptRunner(int argc, char** argv, int entrypoint) {
+    argc_store = argc;
+    argv_store = argv;
     // init font and show splash
     if (!SetFont(NULL, 0)) return GODMODE_EXIT_POWEROFF;
     SetLanguage(NULL, 0);

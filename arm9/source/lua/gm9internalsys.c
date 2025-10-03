@@ -173,6 +173,18 @@ static const luaL_Reg internalsys_global_lib[] = {
 
 int gm9lua_open_internalsys(lua_State* L) {
     luaL_newlib(L, internalsys_lib);
+
+    int argc;
+    char** argv;
+    GetBootArgs(&argc, &argv);
+
+    lua_newtable(L);
+    for (int i = 0; i < argc; i++) {
+        lua_pushstring(L, argv[i]);
+        lua_seti(L, -2, i + 1);
+    }
+    lua_setfield(L, -2, "boot_args");
+
     lua_pushglobaltable(L); // push global table to stack
     luaL_setfuncs(L, internalsys_global_lib, 0); // set global funcs
     lua_pop(L, 1); // pop global table from stack
